@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Stock cover control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E4E8EB; --panel:#FAFBFC; --ink:#101820; --ink60:#5A6672; --ink35:#8D97A1; --rule:#CCD4DA;
+  --out:#5C1A26; --crit:#CE3A2B; --low:#D98A16; --ok:#1C7A64; --over:#3F6497; --dead:#8D97A1;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;padding:22px 18px 40px;}
+.inner{max-width:1180px;margin:0 auto;}
+.masthead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;
+  border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:14px;}
+.title{font-family:Oswald,sans-serif;font-weight:600;font-size:30px;line-height:1;text-transform:uppercase;letter-spacing:.02em;margin:0;}
+.subtitle{font-size:12.5px;color:var(--ink60);margin-top:6px;}
+.asof{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink60);}
+.asof b{color:var(--ink);font-weight:600;}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;}
+.tab{font-family:Oswald,sans-serif;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink60);cursor:pointer;border-radius:2px;}
+.tab:hover{border-color:var(--ink);color:var(--ink);}
+.tab[data-on="1"]{background:var(--ink);border-color:var(--ink);color:var(--panel);}
+button:focus-visible,input:focus-visible,th:focus-visible{outline:2px solid var(--crit);outline-offset:2px;}
+
+.srcbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--rule);
+  border-left:3px solid var(--ok);padding:9px 13px;margin:14px 0 0;font-size:12px;color:var(--ink60);}
+.srcbar b{color:var(--ink);font-weight:600;}
+.srcbar .doc{font-weight:600;color:var(--ink);}
+.srcbar .sep{color:var(--rule);}
+.srcbar .grow{flex:1;min-width:80px;}
+.srcbar[data-state="error"]{border-left-color:var(--crit);}
+.srcbar[data-state="loading"]{border-left-color:var(--low);}
+.mini{font-family:Oswald,sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;
+  border:1px solid var(--rule);background:#fff;color:var(--ink);cursor:pointer;border-radius:2px;}
+.mini:hover{border-color:var(--ink);}
+.mini[disabled]{opacity:.5;cursor:default;}
+.err{color:var(--crit);font-weight:500;}
+
+.gate{background:var(--panel);border:1px solid var(--ink);padding:34px 26px;margin-top:18px;max-width:640px;}
+.gate h2{font-family:Oswald,sans-serif;font-size:18px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;}
+.gate p{font-size:13px;line-height:1.65;color:var(--ink60);margin:0 0 16px;max-width:56ch;}
+.gate .big{font-family:Oswald,sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+  padding:11px 20px;border:1px solid var(--ink);background:var(--ink);color:var(--panel);cursor:pointer;border-radius:2px;}
+.gate .big:hover{opacity:.88;}
+.gate .fine{font-size:11.5px;color:var(--ink35);margin-top:14px;line-height:1.6;}
+
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin:16px 0 22px;}
+.tile{background:var(--panel);padding:13px 14px 12px;}
+.tile-label{font-family:Oswald,sans-serif;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink60);}
+.tile-value{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:25px;font-weight:600;line-height:1.15;margin-top:5px;}
+.tile-sub{font-size:11px;color:var(--ink35);margin-top:2px;}
+
+.panel{background:var(--panel);border:1px solid var(--rule);padding:16px 16px 14px;margin-bottom:18px;}
+.panel-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px;}
+.panel-title{font-family:Oswald,sans-serif;font-size:15px;letter-spacing:.09em;text-transform:uppercase;margin:0;}
+.panel-note{font-size:11.5px;color:var(--ink60);max-width:62ch;line-height:1.5;}
+
+.runway{margin-top:14px;}
+.rw-row{display:grid;grid-template-columns:minmax(0,2.1fr) 1fr;gap:12px;align-items:center;padding:5px 0;border-top:1px solid var(--rule);}
+.rw-row:first-child{border-top:0;}
+.rw-name{min-width:0;}
+.rw-sku{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rw-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink35);margin-top:1px;}
+.rw-track{position:relative;height:15px;background:#EDF0F2;}
+.rw-bar{position:absolute;left:0;top:0;bottom:0;}
+.rw-days{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;font-weight:600;padding-left:6px;color:var(--ink60);}
+.rw-axis{display:grid;grid-template-columns:minmax(0,2.1fr) 1fr;gap:12px;margin-top:8px;}
+.rw-ticks{position:relative;height:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink35);}
+.rw-tick{position:absolute;top:0;transform:translateX(-50%);}
+.rw-guide{position:absolute;top:0;bottom:0;width:1px;background:var(--rule);}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:11px;color:var(--ink60);}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 12px;}
+input.search{font-family:Inter,sans-serif;font-size:12.5px;padding:7px 10px;border:1px solid var(--rule);
+  background:#fff;color:var(--ink);min-width:210px;border-radius:2px;}
+.chip-btn{font-family:Oswald,sans-serif;font-size:11px;letter-spacing:.07em;text-transform:uppercase;padding:5px 9px;
+  border:1px solid var(--rule);background:#fff;cursor:pointer;border-radius:2px;color:var(--ink60);}
+.chip-btn[data-on="1"]{background:var(--ink)!important;color:var(--panel)!important;border-color:var(--ink)!important;}
+.chip-btn b{font-family:'IBM Plex Mono',monospace;margin-left:5px;}
+
+.tablewrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead th{font-family:Oswald,sans-serif;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink60);
+  font-weight:500;padding:7px 9px;border-bottom:1.5px solid var(--ink);white-space:nowrap;user-select:none;cursor:pointer;}
+tbody td{padding:7px 9px;border-bottom:1px solid var(--rule);vertical-align:middle;}
+tbody tr:hover{background:#F0F3F5;}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+.sku-cell{font-weight:500;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fsn{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink35);}
+.sort{margin-left:4px;font-size:8px;}
+.chip{display:inline-block;font-family:Oswald,sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 7px;border:1px solid;border-radius:2px;white-space:nowrap;}
+.foot{font-size:11px;color:var(--ink35);line-height:1.6;border-top:1px solid var(--rule);padding-top:12px;margin-top:6px;}
+.empty{padding:26px 4px;font-size:12.5px;color:var(--ink60);}
+.hide{display:none!important;}
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,1fr);}
+  .rw-row,.rw-axis{grid-template-columns:1fr;gap:4px;}
+  .title{font-size:24px;}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+</style>
+</head>
+<body>
+<div class="inner">
+  <div class="masthead">
+    <div>
+      <h1 class="title">Stock cover control</h1>
+      <div class="subtitle">Days of cover, demand and dead stock, read live from Google Sheets.</div>
+    </div>
+    <div style="text-align:right">
+      <div class="asof">Stock position to <b id="asof">—</b></div>
+      <div class="tabs hide" id="cats" style="margin-top:8px;justify-content:flex-end"></div>
+    </div>
+  </div>
+
+  <div class="srcbar hide" id="srcbar" data-state="loading">
+    <span class="doc" id="src-title">—</span>
+    <span class="sep">|</span>
+    <span class="grow" id="src-msg">Reading the sheet…</span>
+    <button class="mini" id="btn-refresh">Refresh now</button>
+    <button class="mini" id="btn-signout">Sign out</button>
+  </div>
+
+  <div class="gate" id="gate">
+    <h2>Sign in to load the numbers</h2>
+    <p>This page holds no data of its own. It reads the ATP and sellout sheet directly from Google using your
+       account, in your browser. If your Google account can't open that sheet, this page stays empty.</p>
+    <button class="big" id="btn-signin">Sign in with Google</button>
+    <div class="fine" id="gate-msg">Read-only access to Google Sheets. Nothing is stored, sent anywhere, or saved to this site.</div>
+  </div>
+
+  <div id="board" class="hide">
+    <div class="tiles" id="tiles"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Cover runway — first to run dry</h2>
+        <div class="panel-note">Bar length is days of stock left at the current 30-day run rate. Anything left of the
+          30-day guide needs a purchase order before it stocks out.</div>
+      </div>
+      <div class="runway" id="runway"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Daily units sold</h2>
+        <div class="panel-note">Bars are units shipped per day; the line is the 7-day average.</div>
+      </div>
+      <div id="demand" style="margin-top:10px"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">SKU ledger</h2>
+        <div class="panel-note">Sorted by days of cover. Click any column heading to re-sort.</div>
+      </div>
+      <div class="controls">
+        <input class="search" id="search" placeholder="Search SKU or FSN" aria-label="Search SKU or FSN" />
+        <span id="chips"></span>
+      </div>
+      <div class="tablewrap" id="ledger"></div>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* ============================================================
+   CONFIG — the only block you need to edit
+   ============================================================ */
+const CONFIG = {
+  // From Google Cloud Console → Credentials → OAuth client ID (type: Web application)
+  clientId: "PASTE_YOUR_CLIENT_ID_HERE.apps.googleusercontent.com",
+
+  // The spreadsheet you want to read
+  sheetId: "10Z3k5TydjwR-16FXU-D5fqy0t6W2oWZTIARmfaAiXOc",
+  sheetTitle: "Sprig/Motorola ATP and sellout",
+
+  // Tab names, exactly as they appear at the bottom of the spreadsheet
+  tabs: ["Sprig", "Motorola", "Minutes Motorola"],
+
+  // How often to re-read the sheet, in minutes
+  refreshMinutes: 15,
+
+  // Days-of-cover thresholds
+  criticalDays: 14,
+  lowDays: 30,
+  overstockDays: 90,
+};
+/* ========================= end config ========================= */
+
+const SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const BANDS = {
+  "Out of stock": "var(--out)", "Critical": "var(--crit)", "Low": "var(--low)",
+  "Healthy": "var(--ok)", "Overstocked": "var(--over)", "No recent sales": "var(--dead)",
+};
+const ORDER = ["Out of stock", "Critical", "Low", "Healthy", "Overstocked", "No recent sales"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmt = (n, d = 0) => n === Infinity ? "∞"
+  : Number(n).toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pad = (n) => String(n).padStart(2, "0");
+const shortDate = (iso) => { const p = iso.split("-"); return p[2] + " " + MON[+p[1] - 1]; };
+const clock = (ts) => new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+
+/* ---------- state ---------- */
+let TOKEN = null, TOKEN_EXP = 0, CLIENT = null;
+let SHEETS = [], FETCHED_AT = null, ANOMALIES = 0;
+const ui = { cat: "All", q: "", status: null, sortKey: "cover", sortDir: "asc" };
+
+/* ---------- date + number parsing ---------- */
+function parseDate(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate());
+  }
+  const s = String(v).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + "-" + pad(+m[2]) + "-" + pad(+m[3]);
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    let a = +m[1], b = +m[2];               // ambiguous M/D vs D/M
+    const day = a > 12 ? a : b, mon = a > 12 ? b : a;
+    return m[3] + "-" + pad(mon) + "-" + pad(day);
+  }
+  if (/\d{4}/.test(s) && /[a-z]{3}/i.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d)) return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  return null;
+}
+const num = (v) => {
+  if (typeof v === "number") return isFinite(v) ? v : 0;
+  const n = Number(String(v ?? "").replace(/[^0-9.\-]/g, ""));
+  return isFinite(n) ? n : 0;
+};
+
+/* ---------- sheet → model ---------- */
+function parseSheet(name, rows) {
+  const hi = rows.findIndex((r) => String((r && r[0]) || "").trim().toUpperCase() === "FSN");
+  if (hi === -1) throw new Error('No header row starting with "FSN" in tab “' + name + '”.');
+  const hdr = rows[hi], cols = [];
+  for (let c = 5; c < hdr.length; c++) {
+    const d = parseDate(hdr[c]);
+    if (d) cols.push([c, d]);
+  }
+  if (!cols.length) throw new Error('No date columns found in tab “' + name + '”.');
+
+  let anomalies = 0;
+  const items = [];
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const fsn = String(r[0] || "").trim();
+    if (!fsn || /^(total|grand total)/i.test(fsn)) continue;
+    const d = cols.map(function (c) {
+      const raw = r[c[0]];
+      if (raw === "" || raw === null || raw === undefined) return 0;
+      const f = Number(String(raw).replace(/,/g, ""));
+      if (!isFinite(f)) return 0;
+      if (Math.abs(f - Math.round(f)) > 1e-9) { anomalies++; return 0; }
+      return Math.round(f);
+    });
+    items.push({ fsn: fsn, sku: String(r[1] || "").trim() || "Unmapped",
+      atp: num(r[2]), drr: num(r[3]), doh: num(r[4]), d: d });
+  }
+
+  let dates = cols.map((c) => c[1]);
+  const t = new Date();
+  const today = t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate());
+  let last = 0;
+  for (let i = 0; i < dates.length; i++) {
+    if (dates[i] <= today && items.some((it) => it.d[i])) last = i;
+  }
+  dates = dates.slice(0, last + 1);
+  items.forEach((it) => { it.d = it.d.slice(0, last + 1); });
+  return { name: name, dates: dates, items: items, anomalies: anomalies };
+}
+
+function enrich(sheets) {
+  return sheets.map(function (s) {
+    const n = s.dates.length;
+    const items = s.items.map(function (it) {
+      const tail = (k) => it.d.slice(Math.max(0, n - k)).reduce((a, b) => a + b, 0);
+      const last7 = tail(7), last30 = tail(30);
+      const prev30 = it.d.slice(Math.max(0, n - 60), Math.max(0, n - 30)).reduce((a, b) => a + b, 0);
+      const drr30 = n ? last30 / Math.min(30, n) : 0;
+      const rate = drr30 > 0 ? drr30 : (it.drr || 0);
+      const cover = rate > 0 ? it.atp / rate : (it.atp > 0 ? Infinity : 0);
+      let status;
+      if (it.atp <= 0) status = "Out of stock";
+      else if (rate <= 0) status = "No recent sales";
+      else if (cover < CONFIG.criticalDays) status = "Critical";
+      else if (cover < CONFIG.lowDays) status = "Low";
+      else if (cover <= CONFIG.overstockDays) status = "Healthy";
+      else status = "Overstocked";
+      return Object.assign({}, it, { catalog: s.name, last7, last30, prev30, rate, cover, status });
+    });
+    return Object.assign({}, s, { items: items });
+  });
+}
+
+/* ---------- auth ---------- */
+function needToken() { return !TOKEN || Date.now() > TOKEN_EXP - 60000; }
+
+function initClient() {
+  if (CLIENT || !window.google || !google.accounts) return;
+  CLIENT = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.clientId,
+    scope: SCOPE,
+    callback: function (resp) {
+      if (resp && resp.access_token) {
+        TOKEN = resp.access_token;
+        TOKEN_EXP = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+        load();
+      } else { showGate("Google did not return access. Try signing in again."); }
+    },
+    error_callback: function (err) {
+      const quiet = err && (err.type === "popup_closed" || err.type === "popup_failed_to_open");
+      showGate(quiet ? null : "Sign-in was blocked: " + ((err && err.type) || "unknown error") +
+        ". Check that this site's address is listed as an authorised JavaScript origin on the OAuth client.");
+    },
+  });
+}
+
+function signIn(silent) {
+  initClient();
+  if (!CLIENT) { setTimeout(() => signIn(silent), 400); return; }
+  CLIENT.requestAccessToken({ prompt: silent ? "none" : "" });
+}
+
+function signOut() {
+  if (TOKEN && window.google) google.accounts.oauth2.revoke(TOKEN, () => {});
+  TOKEN = null; TOKEN_EXP = 0; SHEETS = []; FETCHED_AT = null;
+  try { sessionStorage.removeItem("scc-seen"); } catch (e) {}
+  showGate(null);
+}
+
+function showGate(msg) {
+  $("gate").classList.remove("hide");
+  $("board").classList.add("hide");
+  $("srcbar").classList.add("hide");
+  $("cats").classList.add("hide");
+  if (msg) $("gate-msg").innerHTML = '<span class="err">' + esc(msg) + "</span>";
+}
+
+/* ---------- fetch ---------- */
+async function load() {
+  if (needToken()) { signIn(true); return; }
+  $("gate").classList.add("hide");
+  $("srcbar").classList.remove("hide");
+  $("src-title").textContent = CONFIG.sheetTitle;
+  $("srcbar").dataset.state = "loading";
+  $("src-msg").textContent = "Reading the sheet…";
+  $("btn-refresh").disabled = true;
+
+  const ranges = CONFIG.tabs.map((t) => "ranges=" + encodeURIComponent(t)).join("&");
+  const url = "https://sheets.googleapis.com/v4/spreadsheets/" + CONFIG.sheetId +
+    "/values:batchGet?" + ranges + "&majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE";
+
+  try {
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + TOKEN } });
+    if (res.status === 401) { TOKEN = null; signIn(true); return; }
+    if (res.status === 403) throw new Error("Your Google account can't read this spreadsheet, or the Sheets API is not enabled on the Cloud project.");
+    if (res.status === 404) throw new Error("Spreadsheet not found. Check the sheet ID in CONFIG.");
+    if (!res.ok) throw new Error("Google Sheets returned HTTP " + res.status + ".");
+    const body = await res.json();
+    const parsed = (body.valueRanges || []).map((vr, i) => parseSheet(CONFIG.tabs[i], vr.values || []));
+    if (!parsed.some((s) => s.items.length)) throw new Error("The tabs loaded but held no SKU rows.");
+    SHEETS = enrich(parsed);
+    ANOMALIES = parsed.reduce((a, s) => a + s.anomalies, 0);
+    FETCHED_AT = Date.now();
+    try { sessionStorage.setItem("scc-seen", "1"); } catch (e) {}
+    render();
+  } catch (e) {
+    $("srcbar").dataset.state = "error";
+    $("src-msg").innerHTML = '<span class="err">' + esc(e.message) + "</span>";
+    if (!SHEETS.length) { $("board").classList.add("hide"); }
+  } finally {
+    $("btn-refresh").disabled = false;
+  }
+}
+
+/* ---------- render ---------- */
+function pool() {
+  return SHEETS.filter((s) => ui.cat === "All" || s.name === ui.cat).reduce((a, s) => a.concat(s.items), []);
+}
+
+function render() {
+  const P = pool();
+  const byStatus = {};
+  ORDER.forEach((s) => { byStatus[s] = P.filter((p) => p.status === s).length; });
+  const risk = P.filter((p) => p.status === "Critical" || p.status === "Low");
+  const last30 = P.reduce((a, b) => a + b.last30, 0);
+  const prev30 = P.reduce((a, b) => a + b.prev30, 0);
+  const trend = prev30 > 0 ? ((last30 - prev30) / prev30) * 100 : null;
+  const asOf = SHEETS.map((s) => s.dates[s.dates.length - 1]).filter(Boolean).sort().pop();
+
+  $("board").classList.remove("hide");
+  $("cats").classList.remove("hide");
+  $("srcbar").dataset.state = "ok";
+  $("src-msg").innerHTML = "sheet read at <b>" + clock(FETCHED_AT) + "</b> · re-reads every " +
+    CONFIG.refreshMinutes + " min";
+  $("asof").textContent = asOf ? shortDate(asOf) + " " + asOf.slice(0, 4) : "—";
+
+  // catalogue tabs
+  $("cats").innerHTML = ["All"].concat(SHEETS.map((s) => s.name))
+    .map((n) => '<button class="tab" data-cat="' + esc(n) + '" data-on="' + (ui.cat === n ? 1 : 0) + '">' + esc(n) + "</button>")
+    .join("");
+
+  // tiles
+  const tile = (label, value, sub, tone) =>
+    '<div class="tile"><div class="tile-label">' + label + '</div><div class="tile-value"' +
+    (tone ? ' style="color:' + tone + '"' : "") + ">" + value + '</div><div class="tile-sub">' + sub + "</div></div>";
+  $("tiles").innerHTML =
+    tile("Units on hand", fmt(P.reduce((a, b) => a + b.atp, 0)), P.length + " SKUs listed") +
+    tile("Reorder now", fmt(risk.length), fmt(risk.reduce((a, b) => a + b.atp, 0)) + " units, under " + CONFIG.lowDays + " days cover", risk.length ? "var(--crit)" : "var(--ok)") +
+    tile("Out of stock", fmt(byStatus["Out of stock"]), "listed with zero ATP", byStatus["Out of stock"] ? "var(--out)" : "var(--ok)") +
+    tile("Idle stock", fmt(P.filter((p) => p.status === "No recent sales").reduce((a, b) => a + b.atp, 0)),
+      byStatus["No recent sales"] + " SKUs, no sales in 30 days", "var(--dead)") +
+    tile("Sold, last 30 days", fmt(last30),
+      trend === null ? fmt(P.reduce((a, b) => a + b.last7, 0)) + " in the last 7"
+        : (trend >= 0 ? "+" : "") + fmt(trend, 0) + "% vs prior 30",
+      trend === null ? null : (trend >= 0 ? "var(--ok)" : "var(--crit)"));
+
+  renderRunway(P);
+  renderDemand();
+  renderLedger(P, byStatus);
+
+  $("legend").innerHTML = ORDER.map((s) => '<span><i style="background:' + BANDS[s] + '"></i>' + s + "</span>").join("");
+  $("foot").innerHTML =
+    "Run rate is units sold over the trailing 30 days of the sheet, divided by 30; where a SKU had no sales in that " +
+    "window the sheet's own DRR is used instead. Days of cover is stock on hand divided by that rate. Bands: under " +
+    CONFIG.criticalDays + " days critical, under " + CONFIG.lowDays + " low, " + CONFIG.lowDays + "–" +
+    CONFIG.overstockDays + " healthy, over " + CONFIG.overstockDays + " overstocked." +
+    (ANOMALIES ? " " + ANOMALIES + " cells in the daily-sales columns held fractional values and were read as zero." : "") +
+    " Rows with an FSN but no SKU name are shown as “Unmapped”.";
+}
+
+function renderRunway(P) {
+  const rows = P.filter((p) => p.rate > 0 && p.atp > 0).sort((a, b) => a.cover - b.cover).slice(0, 18);
+  const max = CONFIG.overstockDays;
+  if (!rows.length) {
+    $("runway").innerHTML = '<div class="empty">No SKU in this catalogue has sold in the last 30 days, so there is no run rate to project.</div>';
+    return;
+  }
+  $("runway").innerHTML = rows.map(function (r) {
+    const pct = Math.max(2, (Math.min(r.cover, max) / max) * 100);
+    return '<div class="rw-row"><div class="rw-name"><div class="rw-sku">' + esc(r.sku) + '</div>' +
+      '<div class="rw-meta">' + esc(r.catalog) + " · " + fmt(r.atp) + " on hand · " + fmt(r.rate, 2) + "/day</div></div>" +
+      '<div class="rw-track">' +
+        '<div class="rw-guide" style="left:' + (CONFIG.criticalDays / max) * 100 + '%"></div>' +
+        '<div class="rw-guide" style="left:' + (CONFIG.lowDays / max) * 100 + '%"></div>' +
+        '<div class="rw-bar" style="width:' + pct + "%;background:" + BANDS[r.status] + ';opacity:.9"></div>' +
+        '<div class="rw-days" style="left:' + pct + '%">' + fmt(r.cover, 0) + "d</div>" +
+      "</div></div>";
+  }).join("") +
+  '<div class="rw-axis"><div></div><div class="rw-ticks">' +
+    '<span class="rw-tick" style="left:0;transform:none">0</span>' +
+    '<span class="rw-tick" style="left:' + (CONFIG.criticalDays / max) * 100 + '%">' + CONFIG.criticalDays + "d</span>" +
+    '<span class="rw-tick" style="left:' + (CONFIG.lowDays / max) * 100 + '%">' + CONFIG.lowDays + "d</span>" +
+    '<span class="rw-tick" style="left:100%;transform:translateX(-100%)">' + max + "d+</span>" +
+  "</div></div>";
+}
+
+function renderDemand() {
+  const map = new Map();
+  SHEETS.filter((s) => ui.cat === "All" || s.name === ui.cat).forEach(function (s) {
+    s.dates.forEach(function (dt, i) {
+      map.set(dt, (map.get(dt) || 0) + s.items.reduce((a, b) => a + b.d[i], 0));
+    });
+  });
+  const rows = Array.from(map.entries()).sort((a, b) => a[0] < b[0] ? -1 : 1)
+    .map((e) => ({ date: e[0], units: e[1] }));
+  if (!rows.length) { $("demand").innerHTML = '<div class="empty">No daily sales columns in range.</div>'; return; }
+  rows.forEach(function (r, i) {
+    const w = rows.slice(Math.max(0, i - 6), i + 1);
+    r.avg = w.reduce((a, b) => a + b.units, 0) / w.length;
+  });
+
+  const W = 900, H = 230, L = 38, R = 8, T = 10, B = 26;
+  const iw = W - L - R, ih = H - T - B;
+  const max = Math.max(1, ...rows.map((r) => r.units));
+  const step = iw / rows.length;
+  const x = (i) => L + i * step;
+  const y = (v) => T + ih - (v / max) * ih;
+
+  let g = "";
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = (max / ticks) * i;
+    g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--rule)" stroke-width="1"/>' +
+      '<text x="' + (L - 6) + '" y="' + (y(v) + 3.5) + '" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="var(--ink35)">' +
+      Math.round(v) + "</text>";
+  }
+  const bars = rows.map((r, i) =>
+    '<rect x="' + (x(i) + step * 0.15) + '" y="' + y(r.units) + '" width="' + Math.max(1, step * 0.7) +
+    '" height="' + (T + ih - y(r.units)) + '" fill="var(--over)" opacity="0.55"><title>' +
+    shortDate(r.date) + ": " + r.units + " units</title></rect>").join("");
+  const line = rows.map((r, i) => (i ? "L" : "M") + (x(i) + step / 2).toFixed(1) + "," + y(r.avg).toFixed(1)).join(" ");
+  const every = Math.max(1, Math.ceil(rows.length / 9));
+  const xlab = rows.map((r, i) => (i % every === 0 || i === rows.length - 1)
+    ? '<text x="' + (x(i) + step / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="var(--ink35)">' + shortDate(r.date) + "</text>"
+    : "").join("");
+
+  $("demand").innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" ' +
+    'aria-label="Daily units sold with seven day average">' + g + bars +
+    '<path d="' + line + '" fill="none" stroke="var(--crit)" stroke-width="2" stroke-linejoin="round"/>' +
+    xlab + "</svg>";
+}
+
+function spark(d, color) {
+  const w = 84, h = 20, pts = d.slice(-30);
+  if (!pts.length) return "";
+  const max = Math.max(1, ...pts);
+  const step = pts.length > 1 ? w / (pts.length - 1) : w;
+  const path = pts.map((v, i) => (i ? "L" : "M") + (i * step).toFixed(1) + "," + (h - (v / max) * (h - 3) - 1.5).toFixed(1)).join(" ");
+  return '<svg width="' + w + '" height="' + h + '" style="display:block" aria-hidden="true">' +
+    '<path d="' + path + " L" + w + "," + h + " L0," + h + '  Z" fill="' + color + '" opacity="0.10"/>' +
+    '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+}
+
+function renderLedger(P, byStatus) {
+  $("chips").innerHTML = ORDER.map((s) =>
+    '<button class="chip-btn" data-status="' + esc(s) + '" data-on="' + (ui.status === s ? 1 : 0) + '"' +
+    ' style="border-color:' + BANDS[s] + ";color:" + BANDS[s] + '">' + s + "<b>" + byStatus[s] + "</b></button>"
+  ).join(" ") + ((ui.status || ui.q) ? ' <button class="chip-btn" data-status="__clear">Clear</button>' : "");
+
+  let rows = P;
+  if (ui.status) rows = rows.filter((r) => r.status === ui.status);
+  if (ui.q.trim()) {
+    const t = ui.q.trim().toLowerCase();
+    rows = rows.filter((r) => r.sku.toLowerCase().indexOf(t) > -1 || r.fsn.toLowerCase().indexOf(t) > -1);
+  }
+  rows = rows.slice().sort(function (a, b) {
+    let x = a[ui.sortKey], y = b[ui.sortKey];
+    if (typeof x === "string") return ui.sortDir === "asc" ? x.localeCompare(y) : y.localeCompare(x);
+    if (x === Infinity) x = 1e9;
+    if (y === Infinity) y = 1e9;
+    return ui.sortDir === "asc" ? x - y : y - x;
+  });
+
+  const cols = [
+    ["sku", "SKU", ""], ["catalog", "Catalogue", ""], ["atp", "On hand", "right"],
+    ["rate", "Run rate", "right"], ["cover", "Days cover", "right"],
+    ["last7", "7d", "right"], ["last30", "30d", "right"], [null, "Trend", ""], ["status", "Status", ""],
+  ];
+  const head = cols.map((c) => "<th" + (c[0] ? ' data-key="' + c[0] + '"' : "") +
+    (c[2] ? ' style="text-align:' + c[2] + '"' : "") + ">" + c[1] +
+    '<span class="sort">' + (ui.sortKey === c[0] ? (ui.sortDir === "asc" ? "▲" : "▼") : "") + "</span></th>").join("");
+
+  const body = rows.map((r) =>
+    "<tr><td><div class='sku-cell'>" + esc(r.sku) + "</div><div class='fsn'>" + esc(r.fsn) + "</div></td>" +
+    "<td style='color:var(--ink60);white-space:nowrap'>" + esc(r.catalog) + "</td>" +
+    "<td class='num'>" + fmt(r.atp) + "</td>" +
+    "<td class='num' style='color:var(--ink60)'>" + fmt(r.rate, 2) + "</td>" +
+    "<td class='num' style='color:" + BANDS[r.status] + ";font-weight:600'>" + (r.cover === Infinity ? "—" : fmt(r.cover, 0)) + "</td>" +
+    "<td class='num'>" + fmt(r.last7) + "</td><td class='num'>" + fmt(r.last30) + "</td>" +
+    "<td>" + spark(r.d, BANDS[r.status]) + "</td>" +
+    "<td><span class='chip' style='color:" + BANDS[r.status] + ";border-color:" + BANDS[r.status] + "'>" + r.status + "</span></td></tr>"
+  ).join("");
+
+  $("ledger").innerHTML = "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
+    (rows.length ? "" : '<div class="empty">Nothing matches that filter. Clear it to see the full ledger.</div>');
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", function (e) {
+  const cat = e.target.closest("[data-cat]");
+  if (cat) { ui.cat = cat.dataset.cat; render(); return; }
+  const st = e.target.closest("[data-status]");
+  if (st) {
+    if (st.dataset.status === "__clear") { ui.status = null; ui.q = ""; $("search").value = ""; }
+    else ui.status = ui.status === st.dataset.status ? null : st.dataset.status;
+    render(); return;
+  }
+  const th = e.target.closest("th[data-key]");
+  if (th) {
+    const k = th.dataset.key;
+    if (ui.sortKey === k) ui.sortDir = ui.sortDir === "asc" ? "desc" : "asc";
+    else { ui.sortKey = k; ui.sortDir = "asc"; }
+    render();
+  }
+});
+$("search").addEventListener("input", function (e) { ui.q = e.target.value; render(); });
+$("btn-signin").addEventListener("click", () => signIn(false));
+$("btn-refresh").addEventListener("click", () => load());
+$("btn-signout").addEventListener("click", signOut);
+
+setInterval(function () { if (TOKEN) load(); }, CONFIG.refreshMinutes * 60 * 1000);
+window.addEventListener("focus", function () {
+  if (TOKEN && FETCHED_AT && Date.now() - FETCHED_AT > 60000) load();
+});
+
+/* ---------- boot ---------- */
+window.addEventListener("load", function () {
+  if (CONFIG.clientId.indexOf("PASTE_YOUR_CLIENT_ID") === 0) {
+    showGate("This page has no OAuth client ID yet. Open index.html and set CONFIG.clientId — the README has the steps.");
+    $("btn-signin").disabled = true;
+    return;
+  }
+  initClient();
+  let seen = false;
+  try { seen = sessionStorage.getItem("scc-seen") === "1"; } catch (e) {}
+  if (seen) signIn(true);   // returning in this browser session: load without a click
+});
+</script>
+</body>
+</html>
