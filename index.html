@@ -62,6 +62,25 @@ button:focus-visible,input:focus-visible,th:focus-visible{outline:2px solid var(
 .panel-title{font-family:Oswald,sans-serif;font-size:15px;letter-spacing:.09em;text-transform:uppercase;margin:0;}
 .panel-note{font-size:11.5px;color:var(--ink60);max-width:62ch;line-height:1.5;}
 
+.act-sum{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink60);margin-top:2px;}
+.act-sum b{color:var(--ink);font-weight:600;}
+.acts{margin-top:12px;}
+.act-row{display:grid;grid-template-columns:132px minmax(0,2fr) 74px 74px 92px 124px;gap:12px;align-items:center;
+  padding:7px 0;border-top:1px solid var(--rule);}
+.act-head{border-top:0;font-family:Oswald,sans-serif;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink60);padding-bottom:5px;border-bottom:1.5px solid var(--ink);}
+.act-row:hover:not(.act-head){background:#F0F3F5;}
+.act-name{min-width:0;}
+.act-sku{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.act-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink35);margin-top:1px;}
+.act-do{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;text-align:right;white-space:nowrap;}
+.act-do small{display:block;font-family:Oswald,sans-serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:400;color:var(--ink35);}
+.act-when{font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-align:right;white-space:nowrap;}
+.act-why{font-size:11.5px;color:var(--ink60);line-height:1.5;margin-top:10px;padding-top:9px;border-top:1px solid var(--rule);}
+.act-why span{display:inline-block;margin-right:14px;}
+.act-why i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px;}
+
 .runway{margin-top:14px;}
 .rw-row{display:grid;grid-template-columns:minmax(0,2.1fr) 1fr;gap:12px;align-items:center;padding:5px 0;border-top:1px solid var(--rule);}
 .rw-row:first-child{border-top:0;}
@@ -105,6 +124,10 @@ tbody tr:hover{background:#F0F3F5;}
 @media (max-width:900px){
   .tiles{grid-template-columns:repeat(2,1fr);}
   .rw-row,.rw-axis{grid-template-columns:1fr;gap:4px;}
+  .act-row{grid-template-columns:1fr 1fr;gap:4px 12px;padding:9px 0;}
+  .act-row .act-name{grid-column:1/-1;order:-1;}
+  .act-head{display:none;}
+  .act-do,.act-when{text-align:left;}
   .title{font-size:24px;}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
@@ -141,6 +164,24 @@ tbody tr:hover{background:#F0F3F5;}
 
   <div id="board" class="hide">
     <div class="tiles" id="tiles"></div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Do this today</h2>
+          <div class="act-sum" id="act-sum">—</div>
+        </div>
+        <div class="panel-note">Every SKU that needs a decision, worst first. Order quantities bring cover back to
+          <b id="act-target">—</b> days allowing for a <b id="act-lead">—</b> day lead time.</div>
+      </div>
+      <div class="controls" style="margin-top:12px">
+        <span id="act-chips"></span>
+        <span class="grow" style="flex:1"></span>
+        <button class="mini" id="btn-csv">Download list (CSV)</button>
+      </div>
+      <div class="acts" id="actions"></div>
+      <div class="act-why" id="act-why"></div>
+    </div>
 
     <div class="panel">
       <div class="panel-head">
@@ -212,6 +253,16 @@ const BANDS = {
   "Healthy": "var(--ok)", "Overstocked": "var(--over)", "No recent sales": "var(--dead)",
 };
 const ORDER = ["Out of stock", "Critical", "Low", "Healthy", "Overstocked", "No recent sales"];
+
+/* What each action means, worst first. rank drives the order of the list. */
+const ACTS = {
+  "Restock now":     { rank: 0, tone: "var(--out)",  why: "sold out with live demand — losing sales every day" },
+  "Order today":     { rank: 1, tone: "var(--crit)", why: "runs dry before a purchase order could land" },
+  "Order this week": { rank: 2, tone: "var(--low)",  why: "drops under the reorder point during the lead time" },
+  "Promote":         { rank: 3, tone: "var(--over)", why: "holding more than the next " + CONFIG.overstockDays + " days of demand" },
+  "Clear":           { rank: 4, tone: "var(--dead)", why: "no sales in 30 days — capital sitting still" },
+};
+const ACT_ORDER = ["Restock now", "Order today", "Order this week", "Promote", "Clear"];
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const $ = (id) => document.getElementById(id);
@@ -224,8 +275,8 @@ const clock = (ts) => new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit"
 
 /* ---------- state ---------- */
 let TOKEN = null, TOKEN_EXP = 0, CLIENT = null;
-let SHEETS = [], FETCHED_AT = null, ANOMALIES = 0;
-const ui = { cat: "All", q: "", status: null, sortKey: "cover", sortDir: "asc" };
+let SHEETS = [], FETCHED_AT = null, ANOMALIES = 0, ACTIONS = [];
+const ui = { cat: "All", q: "", status: null, act: null, actAll: false, sortKey: "cover", sortDir: "asc" };
 
 /* ---------- date + number parsing ---------- */
 function parseDate(v) {
@@ -443,6 +494,7 @@ function render() {
         : (trend >= 0 ? "+" : "") + fmt(trend, 0) + "% vs prior 30",
       trend === null ? null : (trend >= 0 ? "var(--ok)" : "var(--crit)"));
 
+  renderActions(P);
   renderRunway(P);
   renderDemand();
   renderLedger(P, byStatus);
@@ -455,6 +507,126 @@ function render() {
     CONFIG.overstockDays + " healthy, over " + CONFIG.overstockDays + " overstocked." +
     (ANOMALIES ? " " + ANOMALIES + " cells in the daily-sales columns held fractional values and were read as zero." : "") +
     " Rows with an FSN but no SKU name are shown as “Unmapped”.";
+}
+
+/* ---------- action list ---------- */
+function addDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + Math.floor(n));
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+/* One row per SKU that needs a decision. Quantity tops cover back up to
+   targetCoverDays, plus the demand that accrues while the order is in transit. */
+function buildActions(P) {
+  const LT = CONFIG.leadTimeDays, TG = CONFIG.targetCoverDays;
+  const out = [];
+  P.forEach(function (p) {
+    const upto = Math.ceil(p.rate * (LT + TG) - p.atp);
+    let act = null, qty = 0, excess = 0, weight = 0;
+
+    if (p.atp <= 0 && p.rate > 0) {
+      act = "Restock now"; qty = Math.max(1, Math.ceil(p.rate * (LT + TG)));
+      weight = p.rate * LT;                       // demand that goes unserved while it is out
+    } else if (p.rate > 0 && p.cover < LT) {
+      act = "Order today"; qty = Math.max(1, upto);
+      weight = p.rate * LT - p.atp;               // units short before a PO could land
+    } else if (p.rate > 0 && p.cover < CONFIG.lowDays) {
+      act = "Order this week"; qty = Math.max(1, upto);
+      weight = p.rate * (LT + TG) - p.atp;
+    } else if (p.rate > 0 && p.cover > CONFIG.overstockDays) {
+      act = "Promote"; excess = Math.round(p.atp - p.rate * CONFIG.overstockDays);
+      weight = excess;
+    } else if (p.rate <= 0 && p.atp > 0) {
+      act = "Clear"; excess = p.atp; weight = p.atp;
+    } else return;                                // healthy, or dead with nothing on hand
+
+    out.push(Object.assign({}, p, {
+      act: act, qty: qty, excess: excess, weight: weight,
+      dry: p.cover === Infinity || p.rate <= 0 ? null : addDays(p.cover),
+    }));
+  });
+  return out.sort((a, b) => ACTS[a.act].rank - ACTS[b.act].rank || b.weight - a.weight);
+}
+
+function renderActions(P) {
+  ACTIONS = buildActions(P);
+  const counts = {};
+  ACT_ORDER.forEach((a) => { counts[a] = ACTIONS.filter((r) => r.act === a).length; });
+  const buy = ACTIONS.filter((r) => r.qty > 0);
+  const tied = ACTIONS.filter((r) => r.excess > 0);
+
+  $("act-target").textContent = CONFIG.targetCoverDays;
+  $("act-lead").textContent = CONFIG.leadTimeDays;
+  $("act-sum").innerHTML = ACTIONS.length
+    ? "<b>" + fmt(buy.length) + "</b> SKUs to order · <b>" + fmt(buy.reduce((a, b) => a + b.qty, 0)) +
+      "</b> units · <b>" + fmt(tied.reduce((a, b) => a + b.excess, 0)) + "</b> units tied up in " +
+      fmt(tied.length) + " slow or dead SKUs"
+    : "Nothing needs a decision in this catalogue.";
+
+  $("act-chips").innerHTML = ACT_ORDER.filter((a) => counts[a]).map((a) =>
+    '<button class="chip-btn" data-act="' + esc(a) + '" data-on="' + (ui.act === a ? 1 : 0) + '"' +
+    ' style="border-color:' + ACTS[a].tone + ";color:" + ACTS[a].tone + '">' + a + "<b>" + counts[a] + "</b></button>"
+  ).join(" ") + (ui.act ? ' <button class="chip-btn" data-act="__clear">Clear</button>' : "");
+
+  const rows = ui.act ? ACTIONS.filter((r) => r.act === ui.act) : ACTIONS;
+  const shown = ui.actAll ? rows : rows.slice(0, 12);
+
+  if (!rows.length) {
+    $("actions").innerHTML = '<div class="empty">Every SKU here is inside its cover bands. Nothing to order, nothing idle.</div>';
+    $("act-why").innerHTML = "";
+    return;
+  }
+
+  $("actions").innerHTML =
+    '<div class="act-row act-head"><div>Action</div><div>SKU</div><div style="text-align:right">On hand</div>' +
+    '<div style="text-align:right">Cover</div><div style="text-align:right">Runs dry</div>' +
+    '<div style="text-align:right">Quantity</div></div>' +
+    shown.map(function (r) {
+      const tone = ACTS[r.act].tone;
+      return '<div class="act-row"><div><span class="chip" style="color:' + tone + ";border-color:" + tone + '">' +
+        r.act + "</span></div>" +
+        '<div class="act-name"><div class="act-sku">' + esc(r.sku) + '</div>' +
+        '<div class="act-meta">' + esc(r.catalog) + " · " + esc(r.fsn) + " · " + fmt(r.rate, 2) + "/day</div></div>" +
+        '<div class="num">' + fmt(r.atp) + "</div>" +
+        '<div class="num" style="color:' + tone + ';font-weight:600">' +
+          (r.cover === Infinity ? "—" : fmt(r.cover, 0) + "d") + "</div>" +
+        '<div class="act-when" style="color:' + (r.qty ? tone : "var(--ink35)") + '">' +
+          (r.dry ? shortDate(r.dry) : "—") + "</div>" +
+        '<div class="act-do" style="color:' + tone + '">' + fmt(r.qty || r.excess) +
+          "<small>" + (r.qty ? "units to order" : r.act === "Clear" ? "units idle" : "units excess") + "</small></div>" +
+      "</div>";
+    }).join("") +
+    (rows.length > shown.length
+      ? '<div class="act-row" style="grid-template-columns:1fr"><button class="mini" data-act="__all">Show all ' +
+        rows.length + " actions</button></div>"
+      : "");
+
+  $("act-why").innerHTML = ACT_ORDER.filter((a) => counts[a]).map((a) =>
+    '<span><i style="background:' + ACTS[a].tone + '"></i><b>' + a + "</b> — " + ACTS[a].why + "</span>").join("");
+}
+
+function actionsCsv() {
+  const head = ["Action", "SKU", "FSN", "Catalogue", "On hand", "Run rate per day", "Days cover",
+    "Runs dry", "Order qty", "Excess units"];
+  const cell = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+  const rows = (ui.act ? ACTIONS.filter((r) => r.act === ui.act) : ACTIONS).map((r) => [
+    r.act, r.sku, r.fsn, r.catalog, r.atp, r.rate.toFixed(2),
+    r.cover === Infinity ? "" : Math.round(r.cover), r.dry || "", r.qty || "", r.excess || "",
+  ].map(cell).join(","));
+  return head.map(cell).join(",") + "\r\n" + rows.join("\r\n");
+}
+
+function downloadCsv() {
+  if (!ACTIONS.length) return;
+  const blob = new Blob(["﻿" + actionsCsv()], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "stock-actions-" + addDays(0) + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 function renderRunway(P) {
@@ -587,7 +759,15 @@ function renderLedger(P, byStatus) {
 /* ---------- events ---------- */
 document.addEventListener("click", function (e) {
   const cat = e.target.closest("[data-cat]");
-  if (cat) { ui.cat = cat.dataset.cat; render(); return; }
+  if (cat) { ui.cat = cat.dataset.cat; ui.actAll = false; render(); return; }
+  const ac = e.target.closest("[data-act]");
+  if (ac) {
+    const v = ac.dataset.act;
+    if (v === "__all") ui.actAll = true;
+    else if (v === "__clear") { ui.act = null; ui.actAll = false; }
+    else { ui.act = ui.act === v ? null : v; ui.actAll = false; }
+    render(); return;
+  }
   const st = e.target.closest("[data-status]");
   if (st) {
     if (st.dataset.status === "__clear") { ui.status = null; ui.q = ""; $("search").value = ""; }
@@ -606,6 +786,7 @@ $("search").addEventListener("input", function (e) { ui.q = e.target.value; rend
 $("btn-signin").addEventListener("click", () => signIn(false));
 $("btn-refresh").addEventListener("click", () => load());
 $("btn-signout").addEventListener("click", signOut);
+$("btn-csv").addEventListener("click", downloadCsv);
 
 setInterval(function () { if (TOKEN) load(); }, CONFIG.refreshMinutes * 60 * 1000);
 window.addEventListener("focus", function () {

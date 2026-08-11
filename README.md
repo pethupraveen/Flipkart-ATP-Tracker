@@ -51,8 +51,13 @@ const CONFIG = {
   criticalDays: 14,
   lowDays: 30,
   overstockDays: 90,
+  leadTimeDays: 14,
+  targetCoverDays: 45,
 };
 ```
+
+`leadTimeDays` and `targetCoverDays` drive the action list — set them to your real supplier lead time
+and the cover you want a replenishment to restore.
 
 The sheet ID is the long string in the spreadsheet URL between `/d/` and `/edit`.
 
@@ -81,6 +86,27 @@ Numbers are recomputed rather than trusted:
 - **Days of cover** — stock on hand divided by that run rate.
 - **Bands** — under 14 days critical, under 30 low, 30–90 healthy, over 90 overstocked. Stock with no
   sales in 30 days is flagged separately as idle rather than healthy.
+
+## The action list
+
+**Do this today** is the top panel: one row per SKU that needs a decision, worst first, with the
+quantity to act on. A SKU that is inside its bands doesn't appear at all.
+
+| Action | When it fires | The number shown |
+| --- | --- | --- |
+| **Restock now** | Zero ATP but the SKU is still selling | Units to order |
+| **Order today** | Cover is shorter than the lead time — it runs dry before a PO could land | Units to order |
+| **Order this week** | Cover falls under the low band during the lead time | Units to order |
+| **Promote** | Holding more than `overstockDays` of demand | Units above that line |
+| **Clear** | Stock on hand, no sales in the trailing 30 days | Idle units |
+
+Order quantity is `run rate × (leadTimeDays + targetCoverDays) − stock on hand`: enough to cover the
+wait *and* land back on target cover. **Runs dry** is today plus the current days of cover.
+
+Within an action, rows are ranked by what is at stake — units of demand that go unserved for the
+reorder actions, units of idle capital for the others. Click an action chip to filter the list;
+**Download list (CSV)** exports whatever is on screen, so filtering to *Order today* and exporting
+gives you that purchase order and nothing else.
 
 Trailing date columns with no data anywhere are ignored, so empty future dates don't drag the run
 rate down. Cells holding fractional values in a daily-sales column are read as zero and counted in
