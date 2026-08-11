@@ -199,6 +199,10 @@ const CONFIG = {
   criticalDays: 14,
   lowDays: 30,
   overstockDays: 90,
+
+  // Replenishment planning — drives the action list
+  leadTimeDays: 14,     // days between raising a PO and stock being sellable
+  targetCoverDays: 45,  // days of cover a replenishment should bring a SKU back up to
 };
 /* ========================= end config ========================= */
 
