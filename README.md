@@ -1,4 +1,4 @@
-# Stock cover control
+# Flipkart ATP Tracker
 
 A single-file stock dashboard that reads a Google Sheet in the visitor's own browser, using their
 own Google account. It is a static page — no server, no build step, no dependencies.

@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#F1F4F7" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0E1116" media="(prefers-color-scheme: dark)" />
-<title>Stock cover control</title>
+<title>Flipkart ATP Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -396,9 +396,9 @@ try {
   <div class="inner">
     <div class="masthead">
       <div class="brand">
-        <div class="mark" aria-hidden="true">SC</div>
+        <div class="mark" aria-hidden="true">FA</div>
         <div>
-          <h1 class="title">Stock cover control</h1>
+          <h1 class="title">Flipkart ATP Tracker</h1>
           <div class="subtitle">Days of cover, demand and dead stock &mdash; read live from Google Sheets.</div>
         </div>
       </div>
@@ -432,7 +432,7 @@ try {
 
 <main class="inner">
   <div class="gate" id="gate">
-    <div class="mark" aria-hidden="true">SC</div>
+    <div class="mark" aria-hidden="true">FA</div>
     <h2>Sign in to load the numbers</h2>
     <p>This page holds no data of its own. It reads the ATP and sellout sheet directly from Google using your
        account, in your browser. If your Google account cannot open that sheet, this page stays empty.</p>
@@ -962,7 +962,7 @@ function downloadCsv() {
   const blob = new Blob(["﻿" + actionsCsv()], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "stock-actions-" + addDays(0) + ".csv";
+  a.download = "flipkart-atp-actions-" + addDays(0) + ".csv";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
