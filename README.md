@@ -114,6 +114,24 @@ the footnote.
 
 ---
 
+## Using the page
+
+The layout is one column of panels under a sticky header, so the catalogue tabs, the sheet's read
+time, **Refresh now** and **Sign out** stay reachable however far down you scroll.
+
+| | |
+| --- | --- |
+| **Light / dark** | Follows your operating system by default. The button in the top right overrides it, and the choice is remembered on that browser. |
+| **`/`** | Jumps to the ledger search box. |
+| **`Esc`** | Clears the search box and any action or status filter in one go. |
+| **Filter chips** | Click an action or status chip to narrow the list; click it again, or **Clear filter**, to widen it. The count on each chip is live. |
+| **Sorting** | Click a ledger column heading, or focus it with `Tab` and press `Enter`. The arrow shows the current sort. |
+
+On a phone the ledger drops the Catalogue, 7d and Trend columns — the rest scrolls sideways — and each
+action becomes a card with its on-hand, cover and runs-dry figures labelled underneath.
+
+---
+
 ## Troubleshooting
 
 | What you see | What it means |
@@ -134,7 +152,8 @@ the footnote.
   open web.
 - **Access is inherited, not granted.** This page can't show anyone data they couldn't already open
   in Google Sheets themselves. It doesn't widen access to the spreadsheet by a single person.
-- **Nothing is stored.** No cookies, no local copy of the data, no analytics. The access token lives
+- **No data is stored.** No cookies, no local copy of the numbers, no analytics. The only thing the
+  page keeps is your light/dark preference, in `localStorage` under `scc-theme`. The access token lives
   in memory and expires in about an hour; signing out revokes it.
 - `<meta name="robots" content="noindex">` is set, which keeps the page out of search results but is
   not a security measure.
