@@ -179,11 +179,48 @@ h1,h2{margin:0;}
    ========================================================================== */
 .panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);
   padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-1);}
+
+/* ---- Single-view dashboard grid -------------------------------------------
+   The action list and the runway sit side by side, each panel a fixed height
+   with its own internal scroll, so every section stays reachable without the
+   page growing into a long stack. */
+.dash-2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:stretch;}
+.dash-2 > .panel{margin-bottom:16px;}
+.panel--fill{display:flex;flex-direction:column;min-height:0;}
+.dash-2 > .panel--fill{height:clamp(380px,60vh,640px);}
+.scroll-area{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--rule-strong) transparent;}
+.scroll-area::-webkit-scrollbar{width:9px;}
+.scroll-area::-webkit-scrollbar-track{background:transparent;}
+.scroll-area::-webkit-scrollbar-thumb{background:var(--rule-strong);border-radius:99px;
+  border:2.5px solid var(--surface);}
+/* Keep the column headings in view while the list scrolls under them. */
+.acts .act-head{position:sticky;top:0;z-index:2;background:var(--surface);}
+
+/* Side by side, each panel is roughly half as wide as it used to be. Tighten
+   the fixed columns and the chrome above the list so the SKU name — the one
+   column that actually needs the room — keeps a readable share of it. */
+@media (min-width:1001px){
+  .dash-2 .controls{margin:10px 0 8px;}
+  .dash-2 .panel-head{margin-bottom:0;}
+  .dash-2 .act-why{margin-top:10px;padding-top:10px;}
+  .dash-2 .legend{margin-top:10px;padding-top:10px;}
+  .dash-2 .act-row{grid-template-columns:100px minmax(0,1fr) 54px 52px 70px 92px;gap:8px;}
+  .dash-2 .act-do{font-size:14px;}
+  .dash-2 .rw-row,.dash-2 .rw-axis{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;}
+  /* Two columns of key, so the colour key costs one row of height, not four. */
+  .dash-2 .act-why{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:11px;}
+  .dash-2 .act-why span{display:block;}   /* let the text wrap under its own label */
+  .dash-2 .panel-note{margin-top:6px;}
+}
 .panel-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;
   gap:12px;margin-bottom:2px;}
 .panel-head > *{min-width:0;}
 .panel-title{font-family:Oswald,sans-serif;font-size:15px;letter-spacing:.07em;text-transform:uppercase;}
-.panel-note{font-size:11.5px;color:var(--ink60);max-width:60ch;line-height:1.55;flex:1 1 260px;}
+.panel-note{font-size:11.5px;color:var(--ink60);max-width:60ch;line-height:1.55;flex:none;}
+/* Only inside the header row does the note share the width; as a direct child
+   of a column-flex panel, flex-grow would stretch it down the whole panel. */
+.panel-head > .panel-note{flex:1 1 260px;}
 .panel-note b{color:var(--ink);font-weight:600;}
 
 /* ==========================================================================
@@ -233,6 +270,10 @@ h1,h2{margin:0;}
 @keyframes grow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
 .rw-days{position:absolute;top:0;bottom:0;display:flex;align-items:center;
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;padding-left:7px;color:var(--ink60);}
+/* A bar near full width leaves no room to label it on the right, and the label
+   would push the page wider. Set it inside the bar instead. */
+.rw-days.in{left:auto;right:0;padding-left:0;padding-right:8px;
+  color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);}
 .rw-axis{display:grid;grid-template-columns:minmax(0,1.9fr) 1fr;gap:14px;margin-top:8px;}
 .rw-ticks{position:relative;height:14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink35);}
 .rw-tick{position:absolute;top:0;transform:translateX(-50%);}
@@ -272,10 +313,15 @@ input.search:focus ~ .kbd,input.search:not(:placeholder-shown) ~ .kbd{opacity:0;
 /* ==========================================================================
    Ledger table
    ========================================================================== */
-.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px;}
+/* The ledger scrolls in both directions inside its own box, with the headings
+   pinned, so the full SKU list is reachable without stretching the page. */
+.tablewrap{overflow:auto;margin:0 -20px;padding:0 20px;
+  max-height:clamp(320px,56vh,620px);overscroll-behavior:contain;}
 table{width:100%;border-collapse:collapse;font-size:12.5px;}
-thead th{font-family:Oswald,sans-serif;font-size:10px;letter-spacing:.11em;text-transform:uppercase;
-  color:var(--ink35);font-weight:500;padding:9px 10px;border-bottom:1px solid var(--rule-strong);
+thead th{position:sticky;top:0;z-index:3;background:var(--surface);
+  font-family:Oswald,sans-serif;font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink35);font-weight:500;padding:9px 10px;
+  box-shadow:inset 0 -1px 0 var(--rule-strong);
   white-space:nowrap;user-select:none;cursor:pointer;text-align:left;
   transition:color .14s var(--ease);}
 thead th:hover{color:var(--ink);}
@@ -320,6 +366,15 @@ tbody tr:last-child td{border-bottom:0;}
    ========================================================================== */
 @media (max-width:1080px){
   .tiles,.skel-tiles{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+/* Below this the two columns stop earning their width, so stack them at full
+   width. The lists keep scrolling internally — uncapped they run to hundreds of
+   rows — but with a taller cap, since there is no neighbouring panel to match. */
+@media (max-width:1000px){
+  .dash-2{grid-template-columns:1fr;gap:0;}
+  .dash-2 > .panel--fill{height:auto;}
+  .scroll-area{max-height:70vh;}
+  .tablewrap{max-height:75vh;}
 }
 @media (max-width:820px){
   .inner{padding:0 14px;}
@@ -465,36 +520,39 @@ try {
   <div id="board" class="hide">
     <div class="tiles" id="tiles"></div>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <h2 class="panel-title">Do this today</h2>
-          <div class="act-sum" id="act-sum">&mdash;</div>
+    <div class="dash-2">
+      <section class="panel panel--fill">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">Do this today</h2>
+            <div class="act-sum" id="act-sum">&mdash;</div>
+          </div>
+          <button class="mini" id="btn-csv" type="button"
+                  title="Export the rows currently listed, as a CSV">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>CSV</button>
         </div>
-        <div class="panel-note">Every SKU that needs a decision, worst first. Order quantities bring cover back to
-          <b id="act-target">&mdash;</b> days allowing for a <b id="act-lead">&mdash;</b> day lead time.</div>
-      </div>
-      <div class="controls">
-        <span id="act-chips"></span>
-        <span class="grow"></span>
-        <button class="mini" id="btn-csv" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-          </svg>Download list (CSV)</button>
-      </div>
-      <div class="acts" id="actions"></div>
-      <div class="act-why" id="act-why"></div>
-    </section>
+        <div class="panel-note">Worst first, back to <b id="act-target">&mdash;</b> days cover
+          on a <b id="act-lead">&mdash;</b> day lead time.</div>
+        <div class="controls">
+          <span id="act-chips"></span>
+        </div>
+        <div class="acts scroll-area" id="actions"></div>
+        <div class="act-why" id="act-why"></div>
+      </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Cover runway &mdash; first to run dry</h2>
-        <div class="panel-note">Bar length is days of stock left at the current 30-day run rate. Anything left of the
-          30-day guide needs a purchase order before it stocks out.</div>
-      </div>
-      <div class="runway" id="runway"></div>
-      <div class="legend" id="legend"></div>
-    </section>
+      <section class="panel panel--fill">
+        <div class="panel-head">
+          <h2 class="panel-title">Cover runway</h2>
+          <div class="panel-note">Days of stock left at the current run rate. Anything left of the
+            30-day guide needs a purchase order.</div>
+        </div>
+        <div class="runway scroll-area" id="runway"></div>
+        <div id="rw-axis"></div>
+        <div class="legend" id="legend"></div>
+      </section>
+    </div>
 
     <section class="panel">
       <div class="panel-head">
@@ -504,7 +562,7 @@ try {
       <div id="demand" style="margin-top:12px"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel panel--fill">
       <div class="panel-head">
         <h2 class="panel-title">SKU ledger</h2>
         <div class="panel-note">Sorted by days of cover. Click any column heading to re-sort.</div>
@@ -586,7 +644,7 @@ const clock = (ts) => new Date(ts).toLocaleTimeString("en-IN", { hour: "2-digit"
 /* ---------- state ---------- */
 let TOKEN = null, TOKEN_EXP = 0, CLIENT = null;
 let SHEETS = [], FETCHED_AT = null, ANOMALIES = 0, ACTIONS = [];
-const ui = { cat: "All", q: "", status: null, act: null, actAll: false, sortKey: "cover", sortDir: "asc" };
+const ui = { cat: "All", q: "", status: null, act: null, sortKey: "cover", sortDir: "asc" };
 
 /* ---------- date + number parsing ---------- */
 function parseDate(v) {
@@ -908,8 +966,10 @@ function renderActions(P) {
     ' style="border-color:' + ACTS[a].tone + ";color:" + ACTS[a].tone + '">' + a + "<b>" + counts[a] + "</b></button>"
   ).join(" ") + (ui.act ? ' <button class="chip-btn" type="button" data-act="__clear">Clear filter</button>' : "");
 
+  /* The panel scrolls internally, so every action is listed — no cap, no
+     "show all" step between the reader and the rest of the list. */
   const rows = ui.act ? ACTIONS.filter((r) => r.act === ui.act) : ACTIONS;
-  const shown = ui.actAll ? rows : rows.slice(0, 12);
+  const shown = rows;
 
   if (!rows.length) {
     $("actions").innerHTML = '<div class="empty">Every SKU here is inside its cover bands. Nothing to order, nothing idle.</div>';
@@ -925,7 +985,7 @@ function renderActions(P) {
       const tone = ACTS[r.act].tone;
       return '<div class="act-row"><div><span class="chip" style="color:' + tone + ";border-color:" + tone + '">' +
         r.act + "</span></div>" +
-        '<div class="act-name"><div class="act-sku">' + esc(r.sku) + '</div>' +
+        '<div class="act-name"><div class="act-sku" title="' + esc(r.sku) + '">' + esc(r.sku) + '</div>' +
         '<div class="act-meta">' + esc(r.catalog) + " · " + esc(r.fsn) + " · " + fmt(r.rate, 2) + "/day</div></div>" +
         '<div class="num">' + fmt(r.atp) + "</div>" +
         '<div class="num" style="color:' + tone + ';font-weight:600">' +
@@ -935,11 +995,7 @@ function renderActions(P) {
         '<div class="act-do" style="color:' + tone + '">' + fmt(r.qty || r.excess) +
           "<small>" + (r.qty ? "units to order" : r.act === "Clear" ? "units idle" : "units excess") + "</small></div>" +
       "</div>";
-    }).join("") +
-    (rows.length > shown.length
-      ? '<div class="act-row" style="grid-template-columns:1fr;justify-items:center;border-bottom:0;padding-top:14px">' +
-        '<button class="mini" type="button" data-act="__all">Show all ' + rows.length + " actions</button></div>"
-      : "");
+    }).join("");
 
   $("act-why").innerHTML = ACT_ORDER.filter((a) => counts[a]).map((a) =>
     '<span><i style="background:' + ACTS[a].tone + '"></i><b>' + a + "</b> — " + ACTS[a].why + "</span>").join("");
@@ -971,23 +1027,30 @@ function downloadCsv() {
 }
 
 function renderRunway(P) {
-  const rows = P.filter((p) => p.rate > 0 && p.atp > 0).sort((a, b) => a.cover - b.cover).slice(0, 18);
+  /* Every SKU with stock and a run rate, soonest to run dry first. The panel
+     scrolls, so the list is no longer clipped to the worst handful. */
+  const rows = P.filter((p) => p.rate > 0 && p.atp > 0).sort((a, b) => a.cover - b.cover);
   const max = CONFIG.overstockDays;
   if (!rows.length) {
     $("runway").innerHTML = '<div class="empty">No SKU in this catalogue has sold in the last 30 days, so there is no run rate to project.</div>';
+    $("rw-axis").innerHTML = "";
     return;
   }
   $("runway").innerHTML = rows.map(function (r) {
     const pct = Math.max(2, (Math.min(r.cover, max) / max) * 100);
-    return '<div class="rw-row"><div class="rw-name"><div class="rw-sku">' + esc(r.sku) + '</div>' +
+    return '<div class="rw-row"><div class="rw-name"><div class="rw-sku" title="' + esc(r.sku) + '">' + esc(r.sku) + '</div>' +
       '<div class="rw-meta">' + esc(r.catalog) + " · " + fmt(r.atp) + " on hand · " + fmt(r.rate, 2) + "/day</div></div>" +
       '<div class="rw-track">' +
         '<div class="rw-guide" style="left:' + (CONFIG.criticalDays / max) * 100 + '%"></div>' +
         '<div class="rw-guide" style="left:' + (CONFIG.lowDays / max) * 100 + '%"></div>' +
         '<div class="rw-bar" style="width:' + pct + "%;background:" + BANDS[r.status] + ';opacity:.9"></div>' +
-        '<div class="rw-days" style="left:' + pct + '%">' + fmt(r.cover, 0) + "d</div>" +
+        '<div class="rw-days' + (pct > 78 ? " in" : "") + '" style="' +
+          (pct > 78 ? "right:0" : "left:" + pct + "%") + '">' + fmt(r.cover, 0) + "d</div>" +
       "</div></div>";
-  }).join("") +
+  }).join("");
+
+  /* The scale sits outside the scrolling list so it stays put while you read. */
+  $("rw-axis").innerHTML =
   '<div class="rw-axis"><div></div><div class="rw-ticks">' +
     '<span class="rw-tick" style="left:0;transform:none">0</span>' +
     '<span class="rw-tick" style="left:' + (CONFIG.criticalDays / max) * 100 + '%">' + CONFIG.criticalDays + "d</span>" +
@@ -1089,7 +1152,7 @@ function renderLedger(P, byStatus) {
   }).join("");
 
   const body = rows.map((r) =>
-    "<tr><td><div class='sku-cell'>" + esc(r.sku) + "</div><div class='fsn'>" + esc(r.fsn) + "</div></td>" +
+    "<tr><td><div class='sku-cell' title='" + esc(r.sku) + "'>" + esc(r.sku) + "</div><div class='fsn'>" + esc(r.fsn) + "</div></td>" +
     "<td style='color:var(--ink60);white-space:nowrap'>" + esc(r.catalog) + "</td>" +
     "<td class='num'>" + fmt(r.atp) + "</td>" +
     "<td class='num' style='color:var(--ink60)'>" + fmt(r.rate, 2) + "</td>" +
@@ -1106,13 +1169,12 @@ function renderLedger(P, byStatus) {
 /* ---------- events ---------- */
 document.addEventListener("click", function (e) {
   const cat = e.target.closest("[data-cat]");
-  if (cat) { ui.cat = cat.dataset.cat; ui.actAll = false; render(); return; }
+  if (cat) { ui.cat = cat.dataset.cat; render(); return; }
   const ac = e.target.closest("[data-act]");
   if (ac) {
     const v = ac.dataset.act;
-    if (v === "__all") ui.actAll = true;
-    else if (v === "__clear") { ui.act = null; ui.actAll = false; }
-    else { ui.act = ui.act === v ? null : v; ui.actAll = false; }
+    if (v === "__clear") ui.act = null;
+    else ui.act = ui.act === v ? null : v;
     render(); return;
   }
   const st = e.target.closest("[data-status]");
@@ -1145,7 +1207,7 @@ document.addEventListener("keydown", function (e) {
     $("search").select();
   } else if (e.key === "Escape") {
     if (ui.q || ui.status || ui.act) {
-      ui.q = ""; ui.status = null; ui.act = null; ui.actAll = false;
+      ui.q = ""; ui.status = null; ui.act = null;
       $("search").value = "";
       if (typing) e.target.blur();
       render();
