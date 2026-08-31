@@ -362,6 +362,86 @@ tbody tr:last-child td{border-bottom:0;}
 .toast[data-on="1"]{opacity:1;transform:translate(-50%,0);}
 
 /* ==========================================================================
+   Compact view
+   --------------------------------------------------------------------------
+   A density override, not a second layout: same panels, same order, every
+   piece of chrome tightened so more rows land above the fold. Set as
+   data-density="compact" on <html> before first paint, so the page never
+   opens at one density and jumps to the other.
+   ========================================================================== */
+:root[data-density="compact"]{--r:9px;--r-sm:7px;}
+[data-density="compact"] body{font-size:13px;padding-bottom:30px;}
+
+[data-density="compact"] .masthead{padding:9px 0 8px;gap:12px;}
+[data-density="compact"] .subtitle{display:none;}
+[data-density="compact"] .mark{width:28px;height:28px;font-size:13px;border-radius:7px;}
+[data-density="compact"] .title{font-size:19px;}
+[data-density="compact"] .icon-btn{width:29px;height:29px;}
+[data-density="compact"] .icon-btn svg{width:15px;height:15px;}
+[data-density="compact"] .asof{font-size:9.5px;}
+[data-density="compact"] .asof b{font-size:12px;}
+[data-density="compact"] .tab{padding:4px 10px;font-size:11px;}
+[data-density="compact"] .srcbar{padding-bottom:8px;font-size:11.5px;gap:8px;}
+[data-density="compact"] .mini{padding:4px 9px;font-size:10.5px;}
+
+[data-density="compact"] .tiles,[data-density="compact"] .skel-tiles{gap:8px;margin:12px 0 10px;}
+[data-density="compact"] .tile{padding:9px 11px 10px;}
+[data-density="compact"] .tile-label{font-size:9.5px;letter-spacing:.11em;}
+[data-density="compact"] .tile-value{font-size:20px;margin-top:4px;}
+[data-density="compact"] .tile-sub{font-size:10.5px;margin-top:1px;}
+
+[data-density="compact"] .panel{padding:12px 14px;margin-bottom:10px;}
+[data-density="compact"] .dash-2{gap:10px;}
+[data-density="compact"] .dash-2 > .panel{margin-bottom:10px;}
+[data-density="compact"] .panel-title{font-size:13px;}
+[data-density="compact"] .panel-note{font-size:10.5px;line-height:1.45;}
+[data-density="compact"] .act-sum{font-size:11px;margin-top:3px;}
+[data-density="compact"] .controls{margin:8px 0 6px;gap:6px;}
+[data-density="compact"] .chip-btn{padding:4px 9px;font-size:10px;}
+[data-density="compact"] input.search{padding:6px 30px 6px 29px;font-size:12px;}
+
+[data-density="compact"] .acts{margin-top:4px;}
+[data-density="compact"] .act-row{padding:4px 8px;margin:0 -8px;gap:10px;}
+[data-density="compact"] .act-head{padding-bottom:5px;font-size:9.5px;}
+[data-density="compact"] .act-sku{font-size:12px;}
+[data-density="compact"] .act-meta{font-size:10px;margin-top:1px;}
+[data-density="compact"] .act-do{font-size:13.5px;}
+[data-density="compact"] .act-do small{font-size:8.5px;margin-top:1px;}
+[data-density="compact"] .act-when{font-size:11px;}
+[data-density="compact"] .act-why,[data-density="compact"] .legend{margin-top:8px;padding-top:8px;font-size:10.5px;gap:4px 14px;}
+
+[data-density="compact"] .runway{margin-top:8px;}
+[data-density="compact"] .rw-row{padding:3px 8px;margin:0 -8px;}
+[data-density="compact"] .rw-sku{font-size:11.5px;}
+[data-density="compact"] .rw-meta{font-size:10px;margin-top:1px;}
+[data-density="compact"] .rw-track{height:12px;}
+[data-density="compact"] .rw-days{font-size:10px;}
+
+[data-density="compact"] table{font-size:12px;}
+[data-density="compact"] thead th{padding:6px 8px;font-size:9.5px;}
+[data-density="compact"] tbody td{padding:5px 8px;}
+[data-density="compact"] .fsn{font-size:10px;margin-top:1px;}
+[data-density="compact"] .chip{padding:2px 7px;font-size:9px;}
+[data-density="compact"] .foot{font-size:10.5px;margin-top:14px;padding-top:10px;}
+[data-density="compact"] .empty{padding:22px 8px;}
+
+/* Rows are shorter, so the same box shows more of them - and the box itself
+   claims a little more of the viewport, since the header above it now costs
+   less height. */
+@media (min-width:1001px){
+  [data-density="compact"] .dash-2 > .panel--fill{height:clamp(340px,64vh,700px);}
+  [data-density="compact"] .tablewrap{max-height:clamp(300px,60vh,680px);}
+  [data-density="compact"] .dash-2 .act-row{grid-template-columns:96px minmax(0,1fr) 50px 48px 66px 88px;gap:7px;}
+  [data-density="compact"] .dash-2 .act-do{font-size:13px;}
+}
+
+/* Show the icon for the density you would switch TO. */
+.icon-compact{display:block;}
+.icon-comfy{display:none;}
+:root[data-density="compact"] .icon-compact{display:none;}
+:root[data-density="compact"] .icon-comfy{display:block;}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width:1080px){
@@ -427,6 +507,14 @@ tbody tr:last-child td{border-bottom:0;}
   .gate{padding:28px 20px;margin-top:28px;}
 }
 
+/* Compact still applies on a phone, but an action row there is a card, not a
+   row - it needs its padding back. */
+@media (max-width:820px){
+  [data-density="compact"] .act-row{padding:9px 10px;gap:8px 10px;}
+  [data-density="compact"] .rw-row{padding:6px 8px;}
+  [data-density="compact"] .panel{padding:12px 12px;}
+}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition:none!important;animation:none!important;}
 }
@@ -444,6 +532,8 @@ tbody tr:last-child td{border-bottom:0;}
 try {
   var t = localStorage.getItem("scc-theme");
   if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+  var d = localStorage.getItem("scc-density");
+  if (d === "compact") document.documentElement.dataset.density = "compact";
 } catch (e) {}
 </script>
 
@@ -460,6 +550,14 @@ try {
       <div class="head-right">
         <div class="asof hide" id="asof-wrap">Stock position to <b id="asof">&mdash;</b></div>
         <div class="tabs hide" id="cats" role="tablist" aria-label="Catalogue"></div>
+        <button class="icon-btn" id="btn-density" type="button" title="Switch compact / comfortable view" aria-label="Switch row density" aria-pressed="false">
+          <svg class="icon-compact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 5h16M4 9h16M4 13h16M4 17h16M4 21h16"/>
+          </svg>
+          <svg class="icon-comfy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
         <button class="icon-btn" id="btn-theme" type="button" title="Switch light / dark" aria-label="Switch colour theme">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>
@@ -801,6 +899,22 @@ function applyTheme(mode) {
   try { mode ? localStorage.setItem("scc-theme", mode) : localStorage.removeItem("scc-theme"); } catch (e) {}
 }
 
+function applyDensity(mode) {
+  const compact = mode === "compact";
+  if (compact) document.documentElement.dataset.density = "compact";
+  else delete document.documentElement.dataset.density;
+  const btn = $("btn-density");
+  if (btn) btn.setAttribute("aria-pressed", compact ? "true" : "false");
+  try {
+    compact ? localStorage.setItem("scc-density", "compact")
+            : localStorage.removeItem("scc-density");
+  } catch (e) {}
+}
+
+function isCompact() {
+  return document.documentElement.dataset.density === "compact";
+}
+
 function currentTheme() {
   return document.documentElement.dataset.theme ||
     (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -1074,7 +1188,7 @@ function renderDemand() {
     r.avg = w.reduce((a, b) => a + b.units, 0) / w.length;
   });
 
-  const W = 900, H = 230, L = 38, R = 8, T = 10, B = 26;
+  const W = 900, H = isCompact() ? 152 : 230, L = 38, R = 8, T = 10, B = 26;
   const iw = W - L - R, ih = H - T - B;
   const max = Math.max(1, ...rows.map((r) => r.units));
   const step = iw / rows.length;
@@ -1220,6 +1334,17 @@ $("btn-signin").addEventListener("click", () => signIn(false));
 $("btn-refresh").addEventListener("click", () => load());
 $("btn-signout").addEventListener("click", signOut);
 $("btn-csv").addEventListener("click", downloadCsv);
+/* The pre-paint script sets the attribute; mirror it onto the button state. */
+$("btn-density").setAttribute("aria-pressed", isCompact() ? "true" : "false");
+$("btn-density").addEventListener("click", function () {
+  const next = isCompact() ? null : "compact";
+  applyDensity(next);
+  /* The demand chart is drawn to a fixed viewBox, so it has to be redrawn at
+     the other height. Everything else is CSS. */
+  if (!$("board").classList.contains("hide")) render();
+  toast(next ? "Compact view" : "Comfortable view");
+});
+
 $("btn-theme").addEventListener("click", function () {
   const next = currentTheme() === "dark" ? "light" : "dark";
   applyTheme(next);

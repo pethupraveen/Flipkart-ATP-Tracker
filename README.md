@@ -122,6 +122,7 @@ time, **Refresh now** and **Sign out** stay reachable however far down you scrol
 | | |
 | --- | --- |
 | **Light / dark** | Follows your operating system by default. The button in the top right overrides it, and the choice is remembered on that browser. |
+| **Compact view** | The rows button beside the theme button switches between comfortable and compact density. Compact tightens every padding, type size and row height — same panels in the same order, more rows above the fold — and the choice is remembered on that browser. |
 | **`/`** | Jumps to the ledger search box. |
 | **`Esc`** | Clears the search box and any action or status filter in one go. |
 | **Filter chips** | Click an action or status chip to narrow the list; click it again, or **Clear filter**, to widen it. The count on each chip is live. |
@@ -153,7 +154,8 @@ action becomes a card with its on-hand, cover and runs-dry figures labelled unde
 - **Access is inherited, not granted.** This page can't show anyone data they couldn't already open
   in Google Sheets themselves. It doesn't widen access to the spreadsheet by a single person.
 - **No data is stored.** No cookies, no local copy of the numbers, no analytics. The only thing the
-  page keeps is your light/dark preference, in `localStorage` under `scc-theme`. The access token lives
-  in memory and expires in about an hour; signing out revokes it.
+  page keeps is your light/dark preference and your density choice, in `localStorage` under
+  `scc-theme` and `scc-density`. The access token lives in memory and expires in about an hour;
+  signing out revokes it.
 - `<meta name="robots" content="noindex">` is set, which keeps the page out of search results but is
   not a security measure.
